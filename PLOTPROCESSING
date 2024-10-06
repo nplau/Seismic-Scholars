@@ -1,0 +1,71 @@
+import cv2
+import numpy as np
+import os
+
+# Constants
+hours_after_line = 1  # Duration to analyze after the red line (1 hour)
+total_time_span = 24  # Total time represented in the graph (24 hours)
+input_directory = '/Users/sanjithavasu/Desktop/space_apps_2024_seismic_detection/data/lunar/training/plots'  # Directory with input images
+output_directory = '/Users/sanjithavasu/Desktop/space_apps_2024_seismic_detection/new plots'  # Directory to save extracted images
+
+# Ensure the output directory exists
+os.makedirs(output_directory, exist_ok=True)
+
+# Process each image in the input directory
+for filename in os.listdir(input_directory):
+    if filename.endswith('.png') or filename.endswith('.jpg'):  # Process only image files
+        # Load the image
+        image_path = os.path.join(input_directory, filename)
+        img = cv2.imread(image_path)
+
+        # Get the dimensions of the image
+        height, width, _ = img.shape
+
+        # Crop to the top graph (assume the top half of the image contains the velocity graph)
+        top_graph = img[:height // 2, :]
+
+        # Convert to HSV for better red line detection
+        hsv_img = cv2.cvtColor(top_graph, cv2.COLOR_BGR2HSV)
+
+        # Define thresholds for detecting the red line
+        lower_red = np.array([0, 100, 100])
+        upper_red = np.array([10, 255, 255])
+        mask1 = cv2.inRange(hsv_img, lower_red, upper_red)
+
+        lower_red_2 = np.array([160, 100, 100])
+        upper_red_2 = np.array([180, 255, 255])
+        mask2 = cv2.inRange(hsv_img, lower_red_2, upper_red_2)
+
+        # Combine both masks to cover the red hue range
+        red_mask = mask1 + mask2
+
+        # Find contours of the red line
+        contours, _ = cv2.findContours(red_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # If a red line is detected, extract the region to the right of the red line within 1 hour
+        if contours:
+            largest_contour = max(contours, key=cv2.contourArea)
+            x, y, w, h = cv2.boundingRect(largest_contour)
+
+            # Calculate pixels per hour ratio (time axis)
+            pixels_per_hour = top_graph.shape[1] / total_time_span  # Image width divided by total time span
+
+            # Calculate the number of pixels corresponding to 1 hour
+            pixels_to_extract = int(pixels_per_hour * hours_after_line)
+
+            # Ensure we don't exceed the image width
+            end_x = min(x + w + pixels_to_extract, top_graph.shape[1])
+
+            # Extract the region 1 hour after the red line
+            roi_1_hour = top_graph[:, x+w:end_x]
+
+            # Construct the output image filename
+            output_filename = os.path.join(output_directory, f'extracted_{hours_after_line}_hr_{filename}')
+            
+            # Save the extracted region as a PNG file
+            cv2.imwrite(output_filename, roi_1_hour)
+            print(f'Saved: {output_filename}')
+        else:
+            print(f'No red line found in {filename}')
+
+print("Processing complete!")
