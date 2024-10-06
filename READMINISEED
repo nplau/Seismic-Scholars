@@ -1,0 +1,16 @@
+# Import libraries
+import numpy as np
+import pandas as pd
+from obspy import read
+from obspy.signal.trigger import classic_sta_lta, trigger_onset
+import matplotlib.pyplot as plt
+
+# Load the MiniSEED file
+mseed_file = r'C:\Users\naina\OneDrive\Desktop\space_apps_2024_seismic_detection\data\lunar\test\data\S15_GradeA\xa.s15.00.mhz.1973-08-10HR00_evid00126.mseed'
+st = read(mseed_file)
+
+# Select the first trace
+tr = st.traces[0].copy()
+tr_data = tr.data
+df = tr.stats.sampling_rate
+tr_times = tr.times()
