@@ -1,0 +1,58 @@
+import pandas as pd  # Ensure to import pandas
+
+def calculate_sta_lta(sta, nsta, nlta):
+    """
+    Calculate the Short-Term Average (STA) and Long-Term Average (LTA) ratio.
+    
+    :param sta: List of samples for long-term average (LTA).
+    :param nsta: Number of samples for short-term average (STA).
+    :param nlta: Number of samples for long-term average (LTA).
+    :return: The STA/LTA ratio.
+    """
+    # Ensure the lengths are compatible
+    if len(sta) >= nlta:
+        # Calculate STA and LTA
+        sta_lta = [0] * (len(sta) - nlta + 1)  # Initialize the list for STA/LTA values
+        for i in range(len(sta_lta)):
+            sta_avg = sum(sta[i:i+nsta]) / nsta  # Calculate STA
+            lta_avg = sum(sta[i:i+nlta]) / nlta  # Calculate LTA
+            sta_lta[i] = sta_avg / lta_avg  # Calculate STA/LTA ratio
+    else:
+        raise ValueError("STA length is shorter than LTA length, cannot compute STA/LTA.")
+
+    return sta_lta
+
+def add_sta_lta_column(csv_file_path, output_file_path, nsta, nlta, signal_column):
+    # Read the CSV file into a pandas DataFrame
+    df = pd.read_csv(csv_file_path)
+
+    # Ensure the signal column exists
+    if signal_column not in df.columns:
+        raise ValueError(f"Column '{signal_column}' not found in CSV.")
+
+    # Get the signal data from the column
+    signal_data = df[signal_column].values
+
+    # Calculate the STA/LTA ratio
+    sta_lta_values = calculate_sta_lta(signal_data, nsta, nlta)  # Now correctly passing 3 arguments
+
+    # Pad the sta_lta_values with NaN to match the length of the original signal data
+    sta_lta_values = [None] * (nlta - 1) + sta_lta_values  # Prepend None values to match length
+
+    # Add STA/LTA as a new column in the DataFrame
+    df['STA_LTA'] = sta_lta_values
+
+    # Save the updated DataFrame to a new CSV file
+    df.to_csv(output_file_path, index=False)
+
+    print(f"STA/LTA column added and saved to {output_file_path}")
+
+# Example usage
+csv_file_path = '/Users/sanjithavasu/Desktop/space_apps_2024_seismic_detection/S12_GradeA/xa.s12.00.mhz.1970-04-25HR00_evid00006.csv'  # Path to your input CSV file
+output_file_path = '/Users/sanjithavasu/Desktop/space_apps_2024_seismic_detection/xa.s12.00.mhz.1970-04-25HR00_evid00006.csv'  # Path to save the output CSV file
+nsta = 10  # Short-term average window size
+nlta = 50  # Long-term average window size
+signal_column = 'velocity(m/s)'  # Name of the column with signal values
+
+add_sta_lta_column(csv_file_path, output_file_path, nsta, nlta, signal_column)
+
