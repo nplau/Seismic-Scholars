@@ -1,0 +1,31 @@
+import pandas as pd
+from obspy import Stream, Trace, UTCDateTime
+
+# Load the CSV file
+file_path = 'your_file_path.csv'  # Replace with the path to your CSV file
+df = pd.read_csv(file_path)
+
+# Convert the timestamp column to datetime
+df['time_abs'] = pd.to_datetime(df['time_abs(%Y-%m-%dT%H:%M:%S.%f)'])
+
+# Extract data for MiniSEED
+starttime = UTCDateTime(df['time_abs'].iloc[0])
+sampling_rate = 1.0 / df['time_rel(sec)'].diff().mean()  # Calculate sampling rate from time difference
+
+# Create Trace object with velocity data
+data = df['velocity(m/s)'].values
+trace = Trace(data=data)
+
+# Set metadata
+trace.stats.network = "XX"
+trace.stats.station = "TEST"
+trace.stats.channel = "BHZ"
+trace.stats.starttime = starttime
+trace.stats.sampling_rate = sampling_rate
+
+# Create Stream and write to MiniSEED
+stream = Stream([trace])
+output_mseed_path = 'output.mseed'  # Specify output path
+stream.write(output_mseed_path, format='MSEED')
+
+print(f'MiniSEED file saved to: {output_mseed_path}')
